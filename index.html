@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>両面印刷PDF整形ツール</title>
+<style>
+  :root {
+    --color-bg: #fbf6ee;
+    --color-header-start: #ffb37a;
+    --color-header-end: #ff8a8a;
+    --color-primary: #ff8a4c;
+    --color-primary-dark: #e0672a;
+    --color-secondary: #4ecdc4;
+    --color-secondary-dark: #3bb3aa;
+    --color-card: #ffffff;
+    --color-border: #f0ddc4;
+    --color-text: #2f3b52;
+    --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Hiragino Maru Gothic ProN", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+  header {
+    background: linear-gradient(135deg, var(--color-header-start), var(--color-header-end));
+    color: #fff;
+    padding: 28px 20px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 6px; font-size: 22px; }
+  header p { margin: 0; font-size: 14px; opacity: 0.95; }
+  .app-credit {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    padding: 5px 12px;
+    text-decoration: none;
+    white-space: nowrap;
+    margin-top: 10px;
+  }
+  .app-credit:hover { background: rgba(255, 255, 255, 0.32); }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
+    padding: 22px;
+    margin-bottom: 20px;
+  }
+  .card h2 { margin-top: 0; font-size: 16px; color: var(--color-primary-dark); }
+  .drop-zone {
+    display: block;
+    border: 2px dashed var(--color-border);
+    border-radius: 12px;
+    padding: 30px 16px;
+    text-align: center;
+    cursor: pointer;
+    background: #fffdf9;
+    transition: border-color 0.15s;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--color-primary); }
+  .drop-zone input { display: none; }
+  .file-name { margin-top: 10px; font-size: 14px; color: var(--color-primary-dark); font-weight: bold; }
+  button.main-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 16px;
+  }
+  button.main-btn:disabled { background: #e0d6c8; cursor: not-allowed; }
+  .progress-wrap { margin-top: 14px; display: none; }
+  .progress-bar-bg { background: #f0ddc4; border-radius: 999px; height: 10px; overflow: hidden; }
+  .progress-bar-fill { background: var(--color-secondary); height: 100%; width: 0%; transition: width 0.2s; }
+  .progress-text { font-size: 13px; color: #6b7c93; margin-top: 6px; text-align: center; }
+  .result { display: none; }
+  .result-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .result-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #f8ede0;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .result-list li .badge {
+    font-size: 12px;
+    color: var(--color-secondary-dark);
+    font-weight: bold;
+  }
+  .download-btn {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    width: 100%;
+    padding: 14px;
+    border-radius: 999px;
+    background: var(--color-secondary);
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 16px;
+  }
+  .error-box {
+    display: none;
+    background: #f0ddc4;
+    color: #c0392b;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 14px;
+    font-size: 14px;
+  }
+  .note {
+    font-size: 13px;
+    color: #6b7c93;
+    line-height: 1.7;
+  }
+  .note b { color: var(--color-text); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📄 両面印刷PDF整形ツール</h1>
+  <p>複数人分にまとめたサービス利用票・提供票のPDFを、両面で一括印刷可能に整形！</p>
+  <a class="app-credit" href="https://x.com/kat_t0o" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M18.9 2H22l-7.6 8.7L23 22h-6.6l-5.2-6.8L5 22H1.9l8.1-9.3L1 2h6.7l4.7 6.2L18.9 2zM16.6 20h1.9L7.5 4H5.5L16.6 20z"/></svg>
+    作成：ケアマネカトゥ（@kat_t0o）
+  </a>
+</header>
+
+<main>
+  <div class="card">
+    <h2>① PDFを選ぶ</h2>
+    <label class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="application/pdf">
+      <div>📁 ここをクリック、またはPDFをドラッグ＆ドロップ</div>
+      <div class="file-name" id="fileName"></div>
+    </label>
+
+    <button class="main-btn" id="runBtn" disabled>白紙ページを挿入して整形する</button>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">処理中...</div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <div class="card result" id="resultCard">
+    <h2>② 検出結果</h2>
+    <div id="resultSummary" style="font-size:14px;"></div>
+    <ul class="result-list" id="resultList"></ul>
+    <a class="download-btn" id="downloadBtn" download="両面印刷用.pdf">整形済みPDFをダウンロード</a>
+  </div>
+
+  <div class="card">
+    <h2>こんな時に使えます</h2>
+    <p class="note">
+      利用者ごとに枚数が違う書類（例：Aさん3枚、Bさん2枚…）をまとめて両面印刷すると、
+      次の人の1枚目が前の人の裏面に印刷されてしまい、結局1人ずつ手作業で区切ることになりがちです。<br><br>
+      このツールに全員分をまとめたPDFを入れると、書類に書かれた「<b>〇〇 様</b>」という名前を見て自動で1人分ずつに分け、
+      枚数が奇数の人には白紙ページを1枚足してくれます。これでそのまま両面一括印刷しても、必ず1人分ずつ新しい用紙から始まります。<br><br>
+      枚数の入力や設定は不要です。ファイルをアップロードすると自動で処理されます（ファイルはブラウザ内で処理され、外部には送信されません）。
+    </p>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script type="module">
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.449/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.449/pdf.worker.min.mjs";
+
+const fileInput = document.getElementById("fileInput");
+const dropZone = document.getElementById("dropZone");
+const fileNameEl = document.getElementById("fileName");
+const runBtn = document.getElementById("runBtn");
+const progressWrap = document.getElementById("progressWrap");
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
+const errorBox = document.getElementById("errorBox");
+const resultCard = document.getElementById("resultCard");
+const resultSummary = document.getElementById("resultSummary");
+const resultList = document.getElementById("resultList");
+const downloadBtn = document.getElementById("downloadBtn");
+
+let selectedFile = null;
+
+fileInput.addEventListener("change", () => {
+  if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("dragover");
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+
+function setFile(file) {
+  if (file.type !== "application/pdf") {
+    showError("PDFファイルを選んでください。");
+    return;
+  }
+  selectedFile = file;
+  fileNameEl.textContent = "選択中: " + file.name;
+  runBtn.disabled = false;
+  hideError();
+  resultCard.style.display = "none";
+}
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.style.display = "block";
+}
+function hideError() { errorBox.style.display = "none"; }
+
+function setProgress(ratio, text) {
+  progressWrap.style.display = "block";
+  progressFill.style.width = Math.round(ratio * 100) + "%";
+  progressText.textContent = text;
+}
+
+// 「◯◯ 様」形式の名前をページ本文から抽出（全角スペースにも対応）
+function extractNameFromText(text) {
+  let m = text.match(/([^\s　]{2,10}[\s　]+様)/);
+  if (m) return m[1].trim();
+  m = text.match(/([^\s　]{2,10}様)/);
+  if (m) return m[1].trim();
+  return null;
+}
+
+runBtn.addEventListener("click", async () => {
+  if (!selectedFile) return;
+  hideError();
+  resultCard.style.display = "none";
+  runBtn.disabled = true;
+
+  try {
+    const arrayBuffer = await selectedFile.arrayBuffer();
+
+    // --- 1. 各ページの名前を検出 ---
+    setProgress(0, "PDFを読み込み中...");
+    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+    const total = pdfDoc.numPages;
+    const pageNames = [];
+
+    for (let i = 1; i <= total; i++) {
+      setProgress(i / total * 0.6, `ページ ${i}/${total} を解析中...`);
+      const page = await pdfDoc.getPage(i);
+      const content = await page.getTextContent();
+      const text = content.items.map(it => it.str).join(" ");
+      pageNames.push(extractNameFromText(text));
+    }
+
+    // --- 2. 同名の連続ページをグループ化（名前不明ページは直前の人扱い） ---
+    const groups = []; // { name, pageIndices: [0-based] }
+    let currentName = null;
+    let currentPages = [];
+    for (let i = 0; i < total; i++) {
+      const name = pageNames[i];
+      if (name !== currentName) {
+        if (currentName !== null) groups.push({ name: currentName, pageIndices: currentPages });
+        currentName = name;
+        currentPages = [i];
+      } else {
+        currentPages.push(i);
+      }
+    }
+    if (currentPages.length) groups.push({ name: currentName || "不明", pageIndices: currentPages });
+
+    if (!groups.length) throw new Error("ページが見つかりませんでした。");
+
+    // --- 3. 白紙ページを挿入しながら結合PDFを作成 ---
+    setProgress(0.6, "白紙ページを挿入中...");
+    const srcDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+    const outDoc = await PDFLib.PDFDocument.create();
+    const firstPage = srcDoc.getPage(0);
+    const { width: blankW, height: blankH } = firstPage.getSize();
+
+    const summary = [];
+    for (let g = 0; g < groups.length; g++) {
+      const group = groups[g];
+      setProgress(0.6 + (g / groups.length) * 0.4, `${group.name} を処理中...`);
+      const copied = await outDoc.copyPages(srcDoc, group.pageIndices);
+      copied.forEach(p => outDoc.addPage(p));
+      const addedBlank = group.pageIndices.length % 2 === 1;
+      if (addedBlank) outDoc.addPage([blankW, blankH]);
+      summary.push({ name: group.name, count: group.pageIndices.length, addedBlank });
+    }
+
+    setProgress(1, "PDFを書き出し中...");
+    const outBytes = await outDoc.save();
+    const blob = new Blob([outBytes], { type: "application/pdf" });
+    downloadBtn.href = URL.createObjectURL(blob);
+
+    // --- 4. 結果表示 ---
+    resultSummary.textContent = `${groups.length}人分のページを検出し、結合しました。`;
+    resultList.innerHTML = "";
+    summary.forEach(s => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${s.name}（${s.count}ページ）</span><span class="badge">${s.addedBlank ? "白紙+1" : "そのまま"}</span>`;
+      resultList.appendChild(li);
+    });
+    resultCard.style.display = "block";
+    progressWrap.style.display = "none";
+  } catch (err) {
+    console.error(err);
+    showError("処理中にエラーが発生しました: " + err.message);
+    progressWrap.style.display = "none";
+  } finally {
+    runBtn.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>
